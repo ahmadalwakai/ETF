@@ -2,19 +2,37 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Check, ChevronLeft, LoaderCircle } from 'lucide-react';
+import { ArrowRight, Check, ChevronLeft, LoaderCircle, MapPin } from 'lucide-react';
 import { serviceOptions, getServiceOption, formatCurrency, serviceNeedsTyreSize } from '@/lib/pricing';
 import type { BookingRequest } from '@/lib/booking-schema';
 
 type FormState = BookingRequest;
+
+interface Coordinates {
+  lat: number;
+  lng: number;
+}
 
 interface AddressSuggestion {
   id: string;
   label: string;
   name: string;
   context: string;
+  lat?: number;
+  lng?: number;
   distanceMiles: number;
   inServiceArea: boolean;
+}
+
+interface LocationPreview {
+  label: string;
+  distanceMiles: number;
+  distanceBand?: string;
+  source: string;
+  confidence: string;
+  inServiceArea: boolean;
+  serviceRadiusMiles: number;
+  coordinates?: Coordinates;
 }
 
 interface LiveQuote {
@@ -24,14 +42,9 @@ interface LiveQuote {
     value: string;
     label: string;
   };
-  location: {
-    label: string;
-    distanceMiles: number;
+  location: LocationPreview & {
     distanceBand: string;
-    source: string;
-    confidence: string;
-    inServiceArea: boolean;
-    serviceRadiusMiles: number;
+    coordinates: Coordinates;
   };
   price: {
     basePrice: number;
@@ -107,6 +120,25 @@ function hasUsableTyreSize(value?: string): boolean {
   return tyreSize.length > 0 && !/^not\s*sure$/i.test(tyreSize);
 }
 
+function buildMapFrameSrc(coordinates: Coordinates): string {
+  const lat = Number(coordinates.lat.toFixed(6));
+  const lng = Number(coordinates.lng.toFixed(6));
+  const spread = 0.018;
+  const params = new URLSearchParams({
+    bbox: `${lng - spread},${lat - spread},${lng + spread},${lat + spread}`,
+    layer: 'mapnik',
+    marker: `${lat},${lng}`,
+  });
+
+  return `https://www.openstreetmap.org/export/embed.html?${params.toString()}`;
+}
+
+function buildMapLink(coordinates: Coordinates): string {
+  const lat = Number(coordinates.lat.toFixed(6));
+  const lng = Number(coordinates.lng.toFixed(6));
+  return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+}
+
 export function BookingForm() {
   const router = useRouter();
   const [step, setStep] = useState(1);
@@ -119,6 +151,7 @@ export function BookingForm() {
   const [addressMessage, setAddressMessage] = useState('');
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [liveQuote, setLiveQuote] = useState<LiveQuote | null>(null);
+  const [locationPreview, setLocationPreview] = useState<LocationPreview | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [quoteMessage, setQuoteMessage] = useState('');
   const [tyreSuggestions, setTyreSuggestions] = useState<TyreSizeSuggestion[]>([]);
@@ -134,6 +167,7 @@ export function BookingForm() {
     if (quoteSensitiveFields.includes(key)) {
       setLiveQuote(null);
       setQuoteMessage('');
+      if (key === 'location') setLocationPreview(null);
     }
   }
 
@@ -199,9 +233,7 @@ export function BookingForm() {
 
   useEffect(() => {
     const query = form.location.trim();
-    if (query.length < 3) return;
-
-    if (serviceNeedsTyreSize(form.service) && !hasUsableTyreSize(form.tyreSize)) {
+    if (query.length < 3) {
       return;
     }
 
@@ -225,13 +257,19 @@ export function BookingForm() {
             preferredTime: form.preferredTime,
           }),
         });
-        const payload = (await response.json().catch(() => null)) as (LiveQuote & { error?: string }) | null;
+        const payload = (await response.json().catch(() => null)) as
+          | (LiveQuote & { error?: string; needsTyreSize?: boolean; location?: LocationPreview })
+          | null;
 
         if (!payload?.price) {
-          throw new Error(payload?.error || 'Could not verify this address yet.');
+          setLiveQuote(null);
+          if (payload?.location) setLocationPreview(payload.location);
+          setQuoteMessage(payload?.error || 'Could not verify this address yet.');
+          return;
         }
 
         setLiveQuote(payload);
+        setLocationPreview(payload.location);
         setQuoteMessage(payload.warning || '');
       } catch (quoteError) {
         if (controller.signal.aborted) return;
@@ -328,6 +366,18 @@ export function BookingForm() {
     setSelectedAddressId(suggestion.id);
     setAddressOpen(false);
     setAddressMessage(`${suggestion.distanceMiles} miles from Edinburgh center.`);
+    setLocationPreview({
+      label: suggestion.label,
+      distanceMiles: suggestion.distanceMiles,
+      source: 'postcode',
+      confidence: 'verified',
+      inServiceArea: suggestion.inServiceArea,
+      serviceRadiusMiles: 50,
+      coordinates:
+        typeof suggestion.lat === 'number' && typeof suggestion.lng === 'number'
+          ? { lat: suggestion.lat, lng: suggestion.lng }
+          : undefined,
+    });
     setLiveQuote(null);
     setQuoteMessage('');
     setError('');
@@ -365,8 +415,9 @@ export function BookingForm() {
       return;
     }
 
-    if (step === 1 && liveQuote && !liveQuote.location.inServiceArea) {
-      setError(`This address is outside the ${liveQuote.location.serviceRadiusMiles}-mile Edinburgh booking area.`);
+    const checkedLocation = liveQuote?.location ?? locationPreview;
+    if (step === 1 && checkedLocation && !checkedLocation.inServiceArea) {
+      setError(`This address is outside the ${checkedLocation.serviceRadiusMiles}-mile Edinburgh booking area.`);
       return;
     }
 
@@ -434,6 +485,11 @@ export function BookingForm() {
       setLoading(false);
     }
   }
+
+  const checkedLocation = liveQuote?.location ?? locationPreview;
+  const mapCoordinates = checkedLocation?.coordinates;
+  const mapFrameSrc = mapCoordinates ? buildMapFrameSrc(mapCoordinates) : '';
+  const mapLink = mapCoordinates ? buildMapLink(mapCoordinates) : '';
 
   return (
     <section className="booking-panel" id="book">
@@ -533,6 +589,33 @@ export function BookingForm() {
               </div>
               {addressMessage && !addressOpen && <span className="location-status">{addressMessage}</span>}
             </div>
+
+            {mapCoordinates && checkedLocation && (
+              <div className="location-map">
+                <div className="location-map-frame">
+                  <iframe
+                    title="Fitting location map"
+                    src={mapFrameSrc}
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                  />
+                </div>
+                <div className="location-map-meta">
+                  <span>
+                    <MapPin size={16} aria-hidden="true" />
+                    {checkedLocation.label}
+                  </span>
+                  <strong>
+                    {checkedLocation.inServiceArea
+                      ? `${checkedLocation.distanceMiles} miles from Edinburgh`
+                      : 'Outside service area'}
+                  </strong>
+                  <a href={mapLink} target="_blank" rel="noreferrer">
+                    Open map
+                  </a>
+                </div>
+              </div>
+            )}
 
             <div className="field-row">
               <div className="field">

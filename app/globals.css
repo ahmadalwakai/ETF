@@ -709,6 +709,69 @@ button {
   color: #8f2f2f;
 }
 
+.location-map {
+  overflow: hidden;
+  border: 1px solid rgba(36, 122, 116, 0.22);
+  border-radius: 8px;
+  background: #f7fbf6;
+  box-shadow: 0 14px 34px rgba(16, 26, 36, 0.08);
+}
+
+.location-map-frame {
+  position: relative;
+  min-height: 214px;
+  background:
+    linear-gradient(90deg, rgba(36, 122, 116, 0.08) 1px, transparent 1px),
+    linear-gradient(rgba(36, 122, 116, 0.08) 1px, transparent 1px),
+    #eef8f4;
+  background-size: 34px 34px;
+}
+
+.location-map-frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.location-map-meta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border-top: 1px solid rgba(36, 122, 116, 0.16);
+}
+
+.location-map-meta span {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(16, 26, 36, 0.72);
+  font-size: 0.88rem;
+  line-height: 1.35;
+}
+
+.location-map-meta span svg {
+  flex: 0 0 auto;
+  color: var(--teal);
+}
+
+.location-map-meta strong {
+  color: var(--deep);
+  font-size: 0.86rem;
+  text-align: right;
+}
+
+.location-map-meta a {
+  color: var(--copper);
+  font-size: 0.84rem;
+  font-weight: 900;
+  text-decoration: none;
+}
+
 .price-breakdown {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1328,6 +1391,18 @@ button {
   .price-breakdown,
   .booking-progress {
     grid-template-columns: 1fr;
+  }
+
+  .location-map-frame {
+    min-height: 188px;
+  }
+
+  .location-map-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .location-map-meta strong {
+    text-align: left;
   }
 
   .image-caption {

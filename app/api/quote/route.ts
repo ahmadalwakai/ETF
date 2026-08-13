@@ -40,6 +40,7 @@ export async function POST(request: Request) {
           confidence: geocode.confidence,
           inServiceArea: !outsideServiceArea,
           serviceRadiusMiles: siteConfig.serviceRadiusMiles,
+          coordinates: geocode.coordinates,
         },
       },
       { status: 422 },
@@ -57,6 +58,7 @@ export async function POST(request: Request) {
           confidence: geocode.confidence,
           inServiceArea: false,
           serviceRadiusMiles: siteConfig.serviceRadiusMiles,
+          coordinates: geocode.coordinates,
         },
       },
       { status: 409 },
@@ -91,6 +93,7 @@ export async function POST(request: Request) {
         confidence: geocode.confidence,
         inServiceArea: true,
         serviceRadiusMiles: siteConfig.serviceRadiusMiles,
+        coordinates: geocode.coordinates,
       },
       price: {
         basePrice: liveQuote.serviceTotal,
