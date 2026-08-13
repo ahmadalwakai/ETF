@@ -31,18 +31,14 @@ export const bookingRequestSchema = z.object({
 
 export type BookingRequest = z.infer<typeof bookingRequestSchema>;
 
-export const quoteRequestSchema = bookingRequestSchema
-  .pick({
-    service: true,
-    location: true,
-    quantity: true,
-    tyreSize: true,
-    urgency: true,
-    preferredDate: true,
-    preferredTime: true,
-  })
-  .extend({
-    location: z.string().trim().min(3).max(240),
-  });
+export const quoteRequestSchema = z.object({
+  service: z.enum(['mobile_fitting', 'puncture_repair', 'emergency_callout', 'locking_wheel_nut']).default('mobile_fitting'),
+  location: z.string().trim().min(3).max(240),
+  tyreSize: z.string().trim().max(32).optional(),
+  quantity: z.coerce.number().int().min(1).max(8).default(1),
+  urgency: z.enum(['asap', 'today', 'scheduled']).default('asap'),
+  preferredDate: z.string().trim().max(40).optional(),
+  preferredTime: z.string().trim().max(40).optional(),
+});
 
 export type QuoteRequest = z.infer<typeof quoteRequestSchema>;
