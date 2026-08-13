@@ -4,8 +4,8 @@ import { geocodeEdinburghAddress } from '@/lib/geo';
 import { getServiceOption, serviceNeedsTyreSize } from '@/lib/pricing';
 import { siteConfig } from '@/lib/site';
 import { sendBookingEmail } from '@/lib/email';
-import { handoffBookingToTyreRescue } from '@/lib/tyre-rescue';
-import { createBookingCheckoutSession } from '@/lib/stripe';
+import { getTyreRescueIntegrationConfigStatus, handoffBookingToTyreRescue } from '@/lib/tyre-rescue';
+import { createBookingCheckoutSession, getStripeConfigStatus } from '@/lib/stripe';
 import {
   buildScheduledAt,
   getTyreRescueLiveQuote,
@@ -54,6 +54,24 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: 'Add the tyre size before secure checkout so live Tyre Rescue pricing and stock can be confirmed.' },
       { status: 422 },
+    );
+  }
+
+  const integrationConfig = getTyreRescueIntegrationConfigStatus();
+  const stripeConfig = getStripeConfigStatus();
+  const missingConfig = [
+    integrationConfig.configured ? null : 'tyre_rescue_integration',
+    stripeConfig.configured ? null : 'stripe_checkout',
+  ].filter(Boolean);
+
+  if (missingConfig.length > 0) {
+    return NextResponse.json(
+      {
+        error: 'Secure booking checkout is not fully configured. Please call or try again shortly.',
+        code: 'BOOKING_CHECKOUT_NOT_CONFIGURED',
+        missingConfig,
+      },
+      { status: 503 },
     );
   }
 
@@ -127,15 +145,32 @@ export async function POST(request: Request) {
     paymentFlow: 'external_checkout' as const,
   };
 
-  let handoff = await handoffBookingToTyreRescue(quotePayload);
+  let handoff;
+  try {
+    handoff = await handoffBookingToTyreRescue(quotePayload);
+  } catch (error) {
+    console.error('[edinburgh-tyre-fitting] booking handoff failed:', error);
+    return NextResponse.json(
+      { error: 'Could not send the booking to Tyre Rescue. Please call or try again.', code: 'HANDOFF_FAILED' },
+      { status: 502 },
+    );
+  }
 
   if ((!handoff.success || !handoff.refNumber) && body.quoteId) {
     try {
       await createFreshQuote();
-      handoff = await handoffBookingToTyreRescue({
-        ...quotePayload,
-        quoteId: quoteId as string,
-      });
+      try {
+        handoff = await handoffBookingToTyreRescue({
+          ...quotePayload,
+          quoteId: quoteId as string,
+        });
+      } catch (handoffError) {
+        console.error('[edinburgh-tyre-fitting] booking handoff retry failed:', handoffError);
+        return NextResponse.json(
+          { error: 'Could not send the booking to Tyre Rescue. Please call or try again.', code: 'HANDOFF_FAILED' },
+          { status: 502 },
+        );
+      }
     } catch (error) {
       if (isTyreRescueApiError(error)) {
         return NextResponse.json(
@@ -182,16 +217,25 @@ export async function POST(request: Request) {
     total: String(totalAmount),
     payment: 'cancelled',
   });
-  const checkout = await createBookingCheckoutSession({
-    amount: totalAmount,
-    bookingId: handoff.booking.id,
-    refNumber: handoff.refNumber,
-    customerEmail: body.customerEmail,
-    customerName: body.customerName,
-    requestReference: externalReference,
-    successUrl: `${origin.replace(/\/$/, '')}/final?${finalParams.toString()}&session_id={CHECKOUT_SESSION_ID}`,
-    cancelUrl: `${origin.replace(/\/$/, '')}/final?${cancelParams.toString()}`,
-  });
+  let checkout;
+  try {
+    checkout = await createBookingCheckoutSession({
+      amount: totalAmount,
+      bookingId: handoff.booking.id,
+      refNumber: handoff.refNumber,
+      customerEmail: body.customerEmail,
+      customerName: body.customerName,
+      requestReference: externalReference,
+      successUrl: `${origin.replace(/\/$/, '')}/final?${finalParams.toString()}&session_id={CHECKOUT_SESSION_ID}`,
+      cancelUrl: `${origin.replace(/\/$/, '')}/final?${cancelParams.toString()}`,
+    });
+  } catch (error) {
+    console.error('[edinburgh-tyre-fitting] stripe checkout failed:', error);
+    return NextResponse.json(
+      { error: 'Could not prepare secure payment. Please call or try again.', code: 'STRIPE_CHECKOUT_FAILED' },
+      { status: 502 },
+    );
+  }
 
   if (!checkout.checkoutUrl) {
     return NextResponse.json(

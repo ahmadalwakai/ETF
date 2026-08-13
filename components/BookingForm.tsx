@@ -202,9 +202,6 @@ export function BookingForm() {
     if (query.length < 3) return;
 
     if (serviceNeedsTyreSize(form.service) && !hasUsableTyreSize(form.tyreSize)) {
-      setLiveQuote(null);
-      setQuoteLoading(false);
-      setQuoteMessage('');
       return;
     }
 

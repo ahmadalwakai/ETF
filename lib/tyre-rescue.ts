@@ -64,6 +64,14 @@ export interface TyreRescueBookingResponse {
   details?: unknown;
 }
 
+export function getTyreRescueIntegrationConfigStatus() {
+  const secret = process.env.EDINBURGH_TYRE_FITTING_INTEGRATION_SECRET?.trim();
+  return {
+    configured: Boolean(secret),
+    message: secret ? null : 'EDINBURGH_TYRE_FITTING_INTEGRATION_SECRET is not configured',
+  };
+}
+
 export async function handoffBookingToTyreRescue(
   payload: TyreRescueBookingPayload | TyreRescueQuoteBookingPayload,
 ): Promise<TyreRescueBookingResponse> {

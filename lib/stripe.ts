@@ -17,6 +17,18 @@ function readStripeSecretKey(): string {
   return key;
 }
 
+export function getStripeConfigStatus() {
+  try {
+    readStripeSecretKey();
+    return { configured: true as const };
+  } catch (error) {
+    return {
+      configured: false as const,
+      message: error instanceof Error ? error.message : 'STRIPE_SECRET_KEY is not configured',
+    };
+  }
+}
+
 let stripeClient: Stripe | null = null;
 
 function getStripeClient() {
