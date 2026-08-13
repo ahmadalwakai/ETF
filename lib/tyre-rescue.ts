@@ -67,7 +67,7 @@ export interface TyreRescueBookingResponse {
 export async function handoffBookingToTyreRescue(
   payload: TyreRescueBookingPayload | TyreRescueQuoteBookingPayload,
 ): Promise<TyreRescueBookingResponse> {
-  const baseUrl = process.env.TYRE_RESCUE_API_BASE_URL || 'http://localhost:3002';
+  const baseUrl = process.env.TYRE_RESCUE_API_BASE_URL || 'https://www.tyrerescue.uk';
   const secret = process.env.EDINBURGH_TYRE_FITTING_INTEGRATION_SECRET;
 
   if (!secret) {

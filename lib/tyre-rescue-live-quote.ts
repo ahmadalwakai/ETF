@@ -160,7 +160,7 @@ export function buildScheduledAt(date?: string, time?: string): string | undefin
 }
 
 function tyreRescueBaseUrl(): string {
-  return (process.env.TYRE_RESCUE_API_BASE_URL || 'http://localhost:3002').replace(/\/$/, '');
+  return (process.env.TYRE_RESCUE_API_BASE_URL || 'https://www.tyrerescue.uk').replace(/\/$/, '');
 }
 
 async function readApiJson<T>(path: string, init?: RequestInit): Promise<T> {

@@ -34,7 +34,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ sizes: [] });
   }
 
-  const baseUrl = process.env.TYRE_RESCUE_API_BASE_URL || 'http://localhost:3002';
+  const baseUrl = process.env.TYRE_RESCUE_API_BASE_URL || 'https://www.tyrerescue.uk';
 
   try {
     const response = await fetch(`${baseUrl.replace(/\/$/, '')}/api/tyres/sizes?q=${encodeURIComponent(q)}`, {
