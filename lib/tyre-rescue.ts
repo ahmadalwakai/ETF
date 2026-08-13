@@ -64,6 +64,16 @@ export interface TyreRescueBookingResponse {
   details?: unknown;
 }
 
+interface TyreRescueDirectCreateResponse {
+  bookingId?: string;
+  refNumber?: string;
+  stripeClientSecret?: string | null;
+  total?: number;
+  error?: string;
+  code?: string;
+  details?: unknown;
+}
+
 export function getTyreRescueIntegrationConfigStatus() {
   const secret = process.env.EDINBURGH_TYRE_FITTING_INTEGRATION_SECRET?.trim();
   return {
@@ -82,7 +92,8 @@ export async function handoffBookingToTyreRescue(
     throw new Error('EDINBURGH_TYRE_FITTING_INTEGRATION_SECRET is not configured');
   }
 
-  const response = await fetch(`${baseUrl.replace(/\/$/, '')}/api/integrations/projects/bookings`, {
+  const cleanBaseUrl = baseUrl.replace(/\/$/, '');
+  const response = await fetch(`${cleanBaseUrl}/api/integrations/projects/bookings`, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
@@ -97,6 +108,10 @@ export async function handoffBookingToTyreRescue(
 
   const data = (await response.json().catch(() => null)) as TyreRescueBookingResponse | null;
 
+  if (response.status === 404 && 'quoteId' in payload) {
+    return createTyreRescueBookingDirectly(cleanBaseUrl, payload);
+  }
+
   if (!response.ok || !data?.success) {
     return {
       success: false,
@@ -106,4 +121,60 @@ export async function handoffBookingToTyreRescue(
   }
 
   return data;
+}
+
+async function createTyreRescueBookingDirectly(
+  baseUrl: string,
+  payload: TyreRescueQuoteBookingPayload,
+): Promise<TyreRescueBookingResponse> {
+  const sourceDisplay = `${siteConfig.name} reference ${payload.externalReference}`;
+  const notes = [sourceDisplay, payload.notes].filter(Boolean).join('\n');
+  const response = await fetch(`${baseUrl}/api/bookings/create`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      quoteId: payload.quoteId,
+      customerName: payload.customerName,
+      customerEmail: payload.customerEmail,
+      customerPhone: payload.customerPhone,
+      tyrePhotoUrl: payload.tyrePhotoUrl,
+      vehicleReg: payload.vehicleReg,
+      vehicleMake: payload.vehicleMake,
+      vehicleModel: payload.vehicleModel,
+      tyreSizeDisplay: payload.tyreSizeDisplay,
+      lockingNutStatus: payload.lockingNutStatus,
+      notes,
+      fulfillmentOption: payload.fulfillmentOption,
+      paymentFlow: payload.paymentFlow ?? 'external_checkout',
+      utm_source: siteConfig.integrationSource,
+      utm_medium: 'integration',
+      utm_campaign: 'edinburgh_tyre_fitting_booking_handoff',
+      landing_page: siteConfig.url,
+      referrer: siteConfig.url,
+    }),
+  });
+
+  const data = (await response.json().catch(() => null)) as TyreRescueDirectCreateResponse | null;
+
+  if (!response.ok || !data?.bookingId || !data.refNumber) {
+    return {
+      success: false,
+      error: data?.error ?? 'Tyre Rescue rejected the direct booking create request',
+      details: data,
+    };
+  }
+
+  return {
+    success: true,
+    mode: 'created_direct_fallback',
+    refNumber: data.refNumber,
+    stripeClientSecret: data.stripeClientSecret ?? null,
+    total: data.total,
+    sourceDisplay,
+    booking: {
+      id: data.bookingId,
+      refNumber: data.refNumber,
+      status: 'awaiting_payment',
+    },
+  };
 }
