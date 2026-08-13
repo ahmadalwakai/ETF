@@ -165,7 +165,11 @@ export function BookingForm() {
         setAddressOpen(true);
 
         if (payload?.tokenConfigured === false) {
-          setAddressMessage('Autocomplete needs a Mapbox token. You can still type the address manually.');
+          setAddressMessage(
+            (payload?.suggestions || []).length > 0
+              ? payload?.message || ''
+              : payload?.message || 'Start with a full UK postcode, or type the address manually.',
+          );
         } else if ((payload?.suggestions || []).length === 0) {
           setAddressMessage('No matches yet. Keep typing or use the address as entered.');
         }

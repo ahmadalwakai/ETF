@@ -11,7 +11,7 @@ export interface GeocodeResult {
   coordinates: Coordinates;
   label: string;
   distanceMiles: number;
-  source: 'mapbox' | 'fallback';
+  source: 'mapbox' | 'postcode' | 'fallback';
   confidence: 'verified' | 'manual_review';
 }
 
@@ -31,11 +31,55 @@ export function distanceMiles(from: Coordinates, to: Coordinates): number {
   return 2 * EARTH_RADIUS_MILES * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+async function geocodeUkPostcode(query: string): Promise<GeocodeResult | null> {
+  const response = await fetch(`https://api.postcodes.io/postcodes/${encodeURIComponent(query)}`, {
+    cache: 'no-store',
+  });
+
+  if (!response.ok) return null;
+
+  const data = (await response.json().catch(() => null)) as
+    | {
+        result?: {
+          postcode?: string;
+          latitude?: number;
+          longitude?: number;
+          admin_district?: string;
+          region?: string;
+        };
+      }
+    | null;
+
+  const result = data?.result;
+  if (!result || typeof result.latitude !== 'number' || typeof result.longitude !== 'number') {
+    return null;
+  }
+
+  const coordinates = { lat: result.latitude, lng: result.longitude };
+  const label = [
+    result.postcode,
+    result.admin_district,
+    result.region,
+    'UK',
+  ].filter(Boolean).join(', ');
+
+  return {
+    coordinates,
+    label,
+    distanceMiles: distanceMiles(siteConfig.center, coordinates),
+    source: 'postcode',
+    confidence: 'verified',
+  };
+}
+
 export async function geocodeEdinburghAddress(address: string): Promise<GeocodeResult> {
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || process.env.MAPBOX_SECRET_TOKEN;
   const query = address.trim();
 
   if (!token) {
+    const postcodeResult = await geocodeUkPostcode(query);
+    if (postcodeResult) return postcodeResult;
+
     return {
       coordinates: siteConfig.center,
       label: query,

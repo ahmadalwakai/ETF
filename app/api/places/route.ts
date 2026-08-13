@@ -28,6 +28,20 @@ interface MapboxResponse {
   features?: MapboxFeature[];
 }
 
+interface PostcodesAutocompleteResponse {
+  result?: string[] | null;
+}
+
+interface PostcodeLookupResponse {
+  result?: {
+    postcode?: string;
+    latitude?: number;
+    longitude?: number;
+    admin_district?: string;
+    region?: string;
+  } | null;
+}
+
 function readMapboxToken(): string {
   return (process.env.NEXT_PUBLIC_MAPBOX_TOKEN || process.env.MAPBOX_SECRET_TOKEN || '').trim();
 }
@@ -56,6 +70,50 @@ function formatContext(feature: MapboxFeature): string {
     .join(', ');
 }
 
+async function postcodeSuggestion(postcode: string, index: number) {
+  const response = await fetch(`https://api.postcodes.io/postcodes/${encodeURIComponent(postcode)}`, {
+    cache: 'no-store',
+  });
+
+  if (!response.ok) return null;
+
+  const data = (await response.json().catch(() => null)) as PostcodeLookupResponse | null;
+  const result = data?.result;
+  if (!result || typeof result.latitude !== 'number' || typeof result.longitude !== 'number') {
+    return null;
+  }
+
+  const point = { lng: result.longitude, lat: result.latitude };
+  const miles = distanceMiles(siteConfig.center, point);
+  const context = [result.admin_district, result.region, 'UK'].filter(Boolean).join(', ');
+  const label = [result.postcode || postcode, context].filter(Boolean).join(', ');
+
+  return {
+    id: `postcode-${result.postcode || postcode}-${index}`,
+    label,
+    name: result.postcode || postcode,
+    context,
+    lat: point.lat,
+    lng: point.lng,
+    distanceMiles: Number(miles.toFixed(1)),
+    inServiceArea: miles <= siteConfig.serviceRadiusMiles,
+  };
+}
+
+async function postcodeSuggestions(query: string) {
+  const response = await fetch(
+    `https://api.postcodes.io/postcodes/${encodeURIComponent(query)}/autocomplete?limit=6`,
+    { cache: 'no-store' },
+  );
+
+  if (!response.ok) return [];
+
+  const data = (await response.json().catch(() => null)) as PostcodesAutocompleteResponse | null;
+  const postcodes = data?.result ?? [];
+  const suggestions = await Promise.all(postcodes.map((postcode, index) => postcodeSuggestion(postcode, index)));
+  return suggestions.filter(Boolean);
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const query = (url.searchParams.get('q') || '').trim();
@@ -66,10 +124,15 @@ export async function GET(request: Request) {
   }
 
   if (!token) {
+    const suggestions = await postcodeSuggestions(query);
+
     return NextResponse.json({
-      suggestions: [],
+      suggestions,
       tokenConfigured: false,
-      message: 'Mapbox token is not configured.',
+      message:
+        suggestions.length > 0
+          ? 'Showing postcode matches. Keep typing a full postcode or select one.'
+          : 'Keep typing a full UK postcode, or use the address as entered.',
     });
   }
 
