@@ -24,7 +24,7 @@ function createExternalReference(): string {
   return `ETF-${stamp}-${random}`;
 }
 
-export async function POST(request: Request) {
+async function handleBookingRequest(request: Request) {
   const rawBody = await request.json().catch(() => null);
   const parsed = bookingRequestSchema.safeParse(rawBody);
 
@@ -267,4 +267,19 @@ export async function POST(request: Request) {
     },
     { status: 201 },
   );
+}
+
+export async function POST(request: Request) {
+  try {
+    return await handleBookingRequest(request);
+  } catch (error) {
+    console.error('[edinburgh-tyre-fitting] booking request failed:', error);
+    return NextResponse.json(
+      {
+        error: 'Could not process the booking request. Please call or try again.',
+        code: 'BOOKING_REQUEST_FAILED',
+      },
+      { status: 502 },
+    );
+  }
 }
