@@ -17,10 +17,16 @@ function readStripeSecretKey(): string {
   return key;
 }
 
-export const stripe = new Stripe(readStripeSecretKey(), {
-  apiVersion: '2026-02-25.clover',
-  typescript: true,
-});
+let stripeClient: Stripe | null = null;
+
+function getStripeClient() {
+  stripeClient ??= new Stripe(readStripeSecretKey(), {
+    apiVersion: '2026-02-25.clover',
+    typescript: true,
+  });
+
+  return stripeClient;
+}
 
 export async function createBookingCheckoutSession(input: {
   amount: number;
@@ -40,7 +46,7 @@ export async function createBookingCheckoutSession(input: {
     requestReference: input.requestReference,
   };
 
-  const session = await stripe.checkout.sessions.create({
+  const session = await getStripeClient().checkout.sessions.create({
     mode: 'payment',
     payment_method_types: ['card'],
     client_reference_id: input.refNumber,
