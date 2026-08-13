@@ -92,7 +92,7 @@ export const faqs = [
   {
     question: 'Can I book if I do not know my tyre size?',
     answer:
-      'Yes. Enter “not sure” and add the vehicle registration. We can confirm tyre size before the job is arranged.',
+      'For secure checkout, add the tyre size printed on the tyre sidewall. If you are not sure, call us first so we can confirm the correct size before payment.',
   },
   {
     question: 'Can you help with locking wheel nuts?',

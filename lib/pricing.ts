@@ -51,6 +51,10 @@ export function getServiceBySlug(slug: string) {
   return serviceOptions.find((service) => service.slug === slug);
 }
 
+export function serviceNeedsTyreSize(value: ServiceValue | string): boolean {
+  return value === 'mobile_fitting' || value === 'emergency_callout';
+}
+
 export function formatCurrency(value: number): string {
   return new Intl.NumberFormat('en-GB', {
     style: 'currency',

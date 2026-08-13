@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { quoteRequestSchema } from '@/lib/booking-schema';
 import { geocodeEdinburghAddress } from '@/lib/geo';
-import { getServiceOption } from '@/lib/pricing';
+import { getServiceOption, serviceNeedsTyreSize } from '@/lib/pricing';
 import { siteConfig } from '@/lib/site';
 import {
   buildScheduledAt,
@@ -26,6 +26,25 @@ export async function POST(request: Request) {
   const geocode = await geocodeEdinburghAddress(body.location);
   const outsideServiceArea = geocode.distanceMiles > siteConfig.serviceRadiusMiles;
   const service = getServiceOption(body.service);
+  const tyreSize = body.tyreSize?.trim() || '';
+
+  if (serviceNeedsTyreSize(body.service) && (!tyreSize || /^not\s*sure$/i.test(tyreSize))) {
+    return NextResponse.json(
+      {
+        error: 'Add the tyre size to get a live Tyre Rescue price.',
+        needsTyreSize: true,
+        location: {
+          label: geocode.label,
+          distanceMiles: Number(geocode.distanceMiles.toFixed(1)),
+          source: geocode.source,
+          confidence: geocode.confidence,
+          inServiceArea: !outsideServiceArea,
+          serviceRadiusMiles: siteConfig.serviceRadiusMiles,
+        },
+      },
+      { status: 422 },
+    );
+  }
 
   if (outsideServiceArea) {
     return NextResponse.json(

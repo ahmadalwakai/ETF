@@ -296,7 +296,7 @@ export async function getTyreRescueLiveQuote(input: LiveQuoteInput): Promise<Liv
 
   if (needsTyreStock && parsedTyreSize && !matchedTyre) {
     throw new TyreRescueApiError(
-      'No matching live Tyre Rescue tyre stock was found for that size. Enter not sure or call us so we can confirm it.',
+      'No matching live Tyre Rescue tyre stock was found for that size. Please check the size or call us so we can confirm it.',
       409,
       'TYRE_STOCK_NOT_FOUND',
     );

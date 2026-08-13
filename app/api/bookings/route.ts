@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { bookingRequestSchema } from '@/lib/booking-schema';
 import { geocodeEdinburghAddress } from '@/lib/geo';
-import { getServiceOption } from '@/lib/pricing';
+import { getServiceOption, serviceNeedsTyreSize } from '@/lib/pricing';
 import { siteConfig } from '@/lib/site';
 import { sendBookingEmail } from '@/lib/email';
 import { handoffBookingToTyreRescue } from '@/lib/tyre-rescue';
@@ -48,6 +48,15 @@ export async function POST(request: Request) {
   }
 
   const service = getServiceOption(body.service);
+  const tyreSize = body.tyreSize?.trim() || '';
+
+  if (serviceNeedsTyreSize(body.service) && (!tyreSize || /^not\s*sure$/i.test(tyreSize))) {
+    return NextResponse.json(
+      { error: 'Add the tyre size before secure checkout so live Tyre Rescue pricing and stock can be confirmed.' },
+      { status: 422 },
+    );
+  }
+
   const externalReference = createExternalReference();
   const scheduledAt = buildScheduledAt(body.preferredDate, body.preferredTime);
   const notes = [

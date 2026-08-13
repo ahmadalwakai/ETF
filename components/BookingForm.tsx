@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Check, ChevronLeft, LoaderCircle } from 'lucide-react';
-import { serviceOptions, getServiceOption, formatCurrency } from '@/lib/pricing';
+import { serviceOptions, getServiceOption, formatCurrency, serviceNeedsTyreSize } from '@/lib/pricing';
 import type { BookingRequest } from '@/lib/booking-schema';
 
 type FormState = BookingRequest;
@@ -102,6 +102,11 @@ const quoteSensitiveFields: Array<keyof FormState> = [
   'preferredTime',
 ];
 
+function hasUsableTyreSize(value?: string): boolean {
+  const tyreSize = value?.trim() || '';
+  return tyreSize.length > 0 && !/^not\s*sure$/i.test(tyreSize);
+}
+
 export function BookingForm() {
   const router = useRouter();
   const [step, setStep] = useState(1);
@@ -196,6 +201,13 @@ export function BookingForm() {
     const query = form.location.trim();
     if (query.length < 3) return;
 
+    if (serviceNeedsTyreSize(form.service) && !hasUsableTyreSize(form.tyreSize)) {
+      setLiveQuote(null);
+      setQuoteLoading(false);
+      setQuoteMessage('');
+      return;
+    }
+
     const controller = new AbortController();
     const timeout = window.setTimeout(async () => {
       setQuoteLoading(true);
@@ -285,7 +297,7 @@ export function BookingForm() {
         setTyreOpen(true);
         setTyreMessage(
           sizes.length === 0
-            ? 'No matching sizes yet. You can still type the size manually or enter “not sure”.'
+            ? 'No matching sizes yet. You can still type the size manually.'
             : payload?.fallback
               ? 'Showing common tyre size formats while live stock is checked.'
               : '',
@@ -361,8 +373,8 @@ export function BookingForm() {
       return;
     }
 
-    if (step === 2 && form.service !== 'puncture_repair' && !form.tyreSize?.trim()) {
-      setError('Add the tyre size if you have it. If not, put “not sure” and we will confirm it before the visit.');
+    if (step === 2 && serviceNeedsTyreSize(form.service) && !hasUsableTyreSize(form.tyreSize)) {
+      setError('Add the tyre size to confirm live stock and pricing before secure checkout.');
       return;
     }
 
@@ -618,7 +630,7 @@ export function BookingForm() {
           <>
             <div className="step-helper">
               <strong>Tyre details help us prepare properly.</strong>
-              <span>If you do not know the tyre size, write “not sure” and add the vehicle registration.</span>
+              <span>Use the size printed on the tyre sidewall. If you are not sure, call us before checkout.</span>
             </div>
             <div className="field-row">
               <div className="field">
@@ -642,7 +654,7 @@ export function BookingForm() {
                   <input
                     id="tyreSize"
                     className="input"
-                    placeholder="225/45/R17 or not sure"
+                    placeholder="225/45/R17"
                     value={form.tyreSize}
                     autoComplete="off"
                     role="combobox"
