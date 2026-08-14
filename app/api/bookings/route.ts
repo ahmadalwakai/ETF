@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { bookingRequestSchema } from '@/lib/booking-schema';
 import { geocodeEdinburghAddress } from '@/lib/geo';
 import { getServiceOption, serviceNeedsTyreSize } from '@/lib/pricing';
-import { siteConfig } from '@/lib/site';
+import { getBookingReturnOrigin, siteConfig } from '@/lib/site';
 import { sendBookingEmail } from '@/lib/email';
 import { getTyreRescueIntegrationConfigStatus, handoffBookingToTyreRescue } from '@/lib/tyre-rescue';
 import { createBookingCheckoutSession, getStripeConfigStatus } from '@/lib/stripe';
@@ -204,7 +204,7 @@ async function handleBookingRequest(request: Request) {
   }
 
   const requestUrl = new URL(request.url);
-  const origin = process.env.NEXT_PUBLIC_SITE_URL || requestUrl.origin;
+  const origin = getBookingReturnOrigin(requestUrl.origin);
   const finalParams = new URLSearchParams({
     ref: handoff.refNumber,
     requestRef: externalReference,

@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     'Book mobile tyre fitting, puncture repair and emergency roadside tyre help across Edinburgh and the surrounding countryside within 50 miles.',
   applicationName: siteConfig.name,
   alternates: {
-    canonical: '/',
+    canonical: siteConfig.url,
   },
   openGraph: {
     title: 'Edinburgh Tyre Fitting',

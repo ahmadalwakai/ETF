@@ -1,7 +1,40 @@
+const canonicalSiteUrl = 'https://www.edinburghtyrefitting.com';
+
+function normalizeOrigin(origin: string | undefined): string | null {
+  if (!origin) return null;
+
+  try {
+    const url = new URL(origin);
+    return url.origin;
+  } catch {
+    return null;
+  }
+}
+
+function isLocalOrigin(origin: string): boolean {
+  const hostname = new URL(origin).hostname;
+  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+}
+
+export function getBookingReturnOrigin(requestOrigin: string): string {
+  const configuredOrigin = normalizeOrigin(process.env.NEXT_PUBLIC_SITE_URL);
+
+  if (configuredOrigin && isLocalOrigin(configuredOrigin)) {
+    return configuredOrigin;
+  }
+
+  const localRequestOrigin = normalizeOrigin(requestOrigin);
+  if (localRequestOrigin && isLocalOrigin(localRequestOrigin)) {
+    return localRequestOrigin;
+  }
+
+  return canonicalSiteUrl;
+}
+
 export const siteConfig = {
   name: 'Edinburgh Tyre Fitting',
-  domain: 'edinburghtyrefitting.com',
-  url: process.env.NEXT_PUBLIC_SITE_URL || 'https://edinburghtyrefitting.com',
+  domain: 'www.edinburghtyrefitting.com',
+  url: canonicalSiteUrl,
   phone: process.env.NEXT_PUBLIC_PHONE_NUMBER || '0131 000 0000',
   whatsapp: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '447700900000',
   email: process.env.ADMIN_EMAIL || 'bookings@edinburghtyrefitting.com',

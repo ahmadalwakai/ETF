@@ -23,13 +23,21 @@ export async function generateMetadata({
     title: service.seoTitle,
     description: `${service.longDescription} Book online with ${siteConfig.name}.`,
     alternates: {
-      canonical: `/services/${service.slug}`,
+      canonical: `${siteConfig.url}/services/${service.slug}`,
     },
     openGraph: {
       title: service.seoTitle,
       description: service.longDescription,
       url: `${siteConfig.url}/services/${service.slug}`,
+      siteName: siteConfig.name,
       type: 'website',
+      images: ['/edinburgh-tyre-fitting-hero.png'],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: service.seoTitle,
+      description: service.longDescription,
+      images: ['/edinburgh-tyre-fitting-hero.png'],
     },
   };
 }

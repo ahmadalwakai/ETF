@@ -22,7 +22,21 @@ export async function generateMetadata({
     title: `Mobile Tyre Fitting ${area.name}`,
     description: `${area.summary} Book online with ${siteConfig.name}.`,
     alternates: {
-      canonical: `/areas/${area.slug}`,
+      canonical: `${siteConfig.url}/areas/${area.slug}`,
+    },
+    openGraph: {
+      title: `Mobile Tyre Fitting ${area.name}`,
+      description: area.summary,
+      url: `${siteConfig.url}/areas/${area.slug}`,
+      siteName: siteConfig.name,
+      type: 'website',
+      images: ['/edinburgh-tyre-fitting-hero.png'],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `Mobile Tyre Fitting ${area.name}`,
+      description: area.summary,
+      images: ['/edinburgh-tyre-fitting-hero.png'],
     },
   };
 }
