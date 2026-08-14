@@ -7,13 +7,15 @@ import {
   CreditCard,
   Map,
   MapPin,
-  MessageCircle,
   Navigation,
   Phone,
   ShieldCheck,
   Wrench,
+  Zap,
 } from 'lucide-react';
 import { BookingForm } from '@/components/BookingForm';
+import { MotionEnhancer } from '@/components/MotionEnhancer';
+import { WhatsAppIcon } from '@/components/WhatsAppIcon';
 import { faqs, serviceAreas, siteConfig } from '@/lib/site';
 import { serviceOptions } from '@/lib/pricing';
 
@@ -77,9 +79,9 @@ function JsonLd() {
 }
 
 const heroHighlights = [
+  { value: '30-60 min', label: 'Live ETA from available driver coverage' },
   { value: '50 mi', label: 'Edinburgh, Lothians and nearby countryside' },
-  { value: '4 services', label: 'Fitting, punctures, urgent call-outs and locking nut help' },
-  { value: '1 minute', label: 'Fast booking with address search and live estimate' },
+  { value: 'Live price', label: 'Tyre Rescue stock, driver and distance pricing' },
 ];
 
 const bookingSteps = [
@@ -119,13 +121,103 @@ const experienceCards = [
   },
 ];
 
+const serviceVisuals = [
+  {
+    src: '/duke-van.webp',
+    alt: 'Mobile tyre fitting van ready for a roadside call-out',
+  },
+  {
+    src: '/duke-puncture.webp',
+    alt: 'Tyre puncture from a screw before mobile repair or replacement',
+  },
+  {
+    src: '/duke-wheel-night.webp',
+    alt: 'Night mobile tyre fitting after a roadside call-out',
+  },
+  {
+    src: '/duke-wheel-bmw.webp',
+    alt: 'Fresh tyre fitted on a BMW alloy wheel',
+  },
+];
+
+const heroGallery = [
+  {
+    src: '/facebook-duke-01.jpg',
+    label: 'Mobile fleet',
+  },
+  {
+    src: '/facebook-duke-03.jpg',
+    label: 'Tyre stock ready',
+  },
+  {
+    src: '/facebook-duke-04.jpg',
+    label: 'Wheel checks',
+  },
+];
+
+const heroStripPhotos = [
+  {
+    src: '/facebook-duke-01.jpg',
+    label: 'Mobile fleet',
+  },
+  {
+    src: '/duke-wheel-bmw.webp',
+    label: 'Wheel checks',
+  },
+  {
+    src: '/facebook-duke-03.jpg',
+    label: 'Tyre stock',
+  },
+];
+
+const realWorkPhotos = [
+  {
+    src: '/facebook-duke-01.jpg',
+    alt: 'Mobile tyre fitting vans ready for call-outs',
+    label: 'Mobile fleet',
+  },
+  {
+    src: '/facebook-duke-02.jpg',
+    alt: 'Mobile tyre fitting van on the road',
+    label: 'On the road',
+  },
+  {
+    src: '/facebook-duke-03.jpg',
+    alt: 'Fresh tyre stock ready for mobile fitting',
+    label: 'Tyre stock',
+  },
+  {
+    src: '/facebook-duke-04.jpg',
+    alt: 'Wheel and tyre support at the vehicle',
+    label: 'At the vehicle',
+  },
+  {
+    src: '/facebook-duke-07.jpg',
+    alt: 'Flat tyre inspected before mobile help',
+    label: 'Puncture support',
+  },
+  {
+    src: '/facebook-duke-08.jpg',
+    alt: 'Wheel check before fitting or repair',
+    label: 'Wheel checks',
+  },
+];
+
 export default function HomePage() {
   return (
     <main className="page-shell">
       <JsonLd />
+      <MotionEnhancer />
       <header className="topbar">
         <Link href="/" aria-label="Edinburgh Tyre Fitting home" style={{ display: 'inline-flex', alignItems: 'center', gap: 12 }}>
-          <span className="brand-mark">ETF</span>
+          <Image
+            className="brand-logo"
+            src="/edinburgh-tyre-fitting-logo.svg"
+            alt=""
+            width={180}
+            height={64}
+            priority
+          />
           <strong className="brand-name">{siteConfig.name}</strong>
         </Link>
         <nav className="nav-actions" aria-label="Quick contact">
@@ -142,8 +234,12 @@ export default function HomePage() {
           <a className="icon-link" href={`tel:${siteConfig.phone.replace(/\s/g, '')}`} aria-label="Call Edinburgh Tyre Fitting">
             <Phone size={20} aria-hidden="true" />
           </a>
-          <a className="icon-link" href={`https://wa.me/${siteConfig.whatsapp}`} aria-label="WhatsApp Edinburgh Tyre Fitting">
-            <MessageCircle size={20} aria-hidden="true" />
+          <a
+            className="icon-link whatsapp-link"
+            href={`https://wa.me/${siteConfig.whatsapp}`}
+            aria-label="WhatsApp Edinburgh Tyre Fitting"
+          >
+            <WhatsAppIcon className="whatsapp-icon" size={22} />
           </a>
         </nav>
       </header>
@@ -152,13 +248,34 @@ export default function HomePage() {
         <div className="hero-copy">
           <span className="eyebrow">
             <MapPin size={16} aria-hidden="true" />
-            Edinburgh plus 50-mile countryside cover
+            Mobile tyre fitting across Edinburgh and nearby countryside
           </span>
-          <h1>Edinburgh Tyre Fitting</h1>
+          <h1 className="hero-shimmer" data-shimmer="Mobile tyre help that comes to your exact location.">
+            Mobile tyre help that comes to your exact location.
+          </h1>
           <p className="hero-lede">
-            Mobile tyre fitting, puncture repair and urgent tyre support at your location. Start with your address, get
-            a clear estimate and keep the booking moving without waiting at a garage.
+            Book from your driveway, workplace, hotel, car park or roadside. Share your current location, add the tyre
+            size and get a live Tyre Rescue price before secure checkout.
           </p>
+          <div className="hero-inline-photos" aria-label="Mobile tyre fitting photo highlights">
+            {heroStripPhotos.map((photo) => (
+              <figure className="hero-motion-card" key={photo.src}>
+                <Image
+                  src={photo.src}
+                  alt=""
+                  width={760}
+                  height={500}
+                  loading="eager"
+                  sizes="(max-width: 920px) 100vw, 22vw"
+                  unoptimized={photo.src.startsWith('/facebook-duke-')}
+                />
+                <figcaption>
+                  {photo.label}
+                  <ArrowRight size={15} aria-hidden="true" />
+                </figcaption>
+              </figure>
+            ))}
+          </div>
           <div className="hero-actions">
             <a className="primary-button" href="#book">
               Start booking
@@ -168,6 +285,20 @@ export default function HomePage() {
               <Phone size={18} aria-hidden="true" />
               Call
             </a>
+          </div>
+          <div className="hero-trust-line" aria-label="Service highlights">
+            <span>
+              <Zap size={16} aria-hidden="true" />
+              Fast emergency response
+            </span>
+            <span>
+              <ShieldCheck size={16} aria-hidden="true" />
+              Fully insured fitting
+            </span>
+            <span>
+              <CreditCard size={16} aria-hidden="true" />
+              Secure card checkout
+            </span>
           </div>
           <div className="hero-badge-row" aria-label="Booking highlights">
             {heroHighlights.map((item) => (
@@ -182,16 +313,30 @@ export default function HomePage() {
         <div className="hero-support">
           <div className="hero-image" aria-hidden="true">
             <Image
-              src="/edinburgh-tyre-fitting-hero.png"
+              src="/duke-van.webp"
               alt=""
-              width={920}
-              height={520}
+              width={1600}
+              height={1200}
               priority
             />
             <div className="image-caption">
-              <span>Mobile fitting at home, work or roadside</span>
+              <span>Mobile workshop sent to your location</span>
               <strong>Edinburgh + 50 miles</strong>
             </div>
+          </div>
+          <div className="hero-gallery" aria-label="Mobile tyre fitting photo examples">
+            {heroGallery.map((item) => (
+              <figure key={item.src}>
+                <Image
+                  src={item.src}
+                  alt=""
+                  width={520}
+                  height={680}
+                  unoptimized={item.src.startsWith('/facebook-duke-')}
+                />
+                <figcaption>{item.label}</figcaption>
+              </figure>
+            ))}
           </div>
           <div className="proof-row">
             <div className="proof-item">
@@ -209,6 +354,44 @@ export default function HomePage() {
               <strong>Safety first</strong>
               <span>Roadside details and locking wheel nut status are captured before the visit.</span>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="content-band real-work-band">
+        <div className="band-inner real-work-layout">
+          <div className="real-work-copy">
+            <span className="eyebrow">
+              <ShieldCheck size={16} aria-hidden="true" />
+              Real mobile tyre work
+            </span>
+            <h2>Mobile tyre work customers can recognise.</h2>
+            <p>
+              Vans, tyre stock and wheel-detail photos give the service a clearer local feel before the customer
+              confirms a visit.
+            </p>
+            <div className="real-work-points" aria-label="Photo-backed service proof">
+              <span>Mobile vans</span>
+              <span>Tyre stock</span>
+              <span>Wheel checks</span>
+              <span>Roadside support</span>
+            </div>
+          </div>
+          <div className="real-work-grid" aria-label="Recent mobile tyre work photos">
+            {realWorkPhotos.map((photo) => (
+              <figure className="real-work-photo" key={photo.src}>
+                <Image
+                  src={photo.src}
+                  alt={photo.alt}
+                  width={960}
+                  height={720}
+                  loading="eager"
+                  sizes={photo.src === '/facebook-duke-01.jpg' ? '(max-width: 620px) 100vw, 36vw' : '(max-width: 620px) 50vw, 18vw'}
+                  unoptimized
+                />
+                <figcaption>{photo.label}</figcaption>
+              </figure>
+            ))}
           </div>
         </div>
       </section>
@@ -243,8 +426,10 @@ export default function HomePage() {
           <div className="service-detail-grid">
             {serviceOptions.map((service, index) => {
               const Icon = index === 0 ? Wrench : index === 1 ? ShieldCheck : Navigation;
+              const visual = serviceVisuals[index];
               return (
                 <Link className="service-detail" key={service.value} href={`/services/${service.slug}`}>
+                  <Image src={visual.src} alt={visual.alt} width={720} height={540} loading="eager" />
                   <div className="service-icon">
                     <Icon size={24} aria-hidden="true" />
                   </div>

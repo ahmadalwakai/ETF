@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { CheckCircle2, Clock, MessageCircle, Phone, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, Clock, Phone, ShieldCheck } from 'lucide-react';
+import { WhatsAppIcon } from '@/components/WhatsAppIcon';
 import { siteConfig } from '@/lib/site';
 
 export const metadata: Metadata = {
@@ -22,54 +23,60 @@ export default async function FinalPage({
   const requestRef = params.requestRef || '';
   const total = params.total ? Number(params.total) : null;
   const paymentStatus = params.payment === 'success' ? 'success' : params.payment === 'cancelled' ? 'cancelled' : 'pending';
+  const formattedTotal =
+    total != null && Number.isFinite(total)
+      ? new Intl.NumberFormat('en-GB', {
+          style: 'currency',
+          currency: 'GBP',
+          maximumFractionDigits: 0,
+        }).format(total)
+      : null;
 
   return (
     <main className="final-wrap">
       <section className="final-card" data-payment={paymentStatus}>
-        <div className="success-mark">
-          {paymentStatus === 'cancelled' ? <Clock size={34} aria-hidden="true" /> : <CheckCircle2 size={34} aria-hidden="true" />}
-        </div>
-        <span className="eyebrow">
-          {paymentStatus === 'success' ? 'Payment received' : paymentStatus === 'cancelled' ? 'Payment not completed' : 'Booking received'}
-        </span>
-        <h1>
-          {paymentStatus === 'success'
-            ? 'Your tyre booking is confirmed.'
-            : paymentStatus === 'cancelled'
-              ? 'Your booking is waiting for payment.'
-              : 'Your tyre booking has been received.'}
-        </h1>
-        <p>
-          {paymentStatus === 'success'
-            ? 'Your secure card payment has been completed. Keep your phone nearby while we review timing, access and any details that need attention.'
-            : paymentStatus === 'cancelled'
-              ? 'The request was created, but Stripe Checkout was not completed. Please call or start a new booking if you still need the tyre visit.'
-              : 'We have received your Edinburgh Tyre Fitting request. Keep your phone nearby while we review the details, confirm timing and check anything that needs attention.'}
-        </p>
-        <div className="ref-box">
+        <div className="final-head">
+          <div className="success-mark">
+            {paymentStatus === 'cancelled' ? <Clock size={34} aria-hidden="true" /> : <CheckCircle2 size={34} aria-hidden="true" />}
+          </div>
           <div>
-            <span>Booking ref</span>
-            <strong>{ref}</strong>
+            <span className="eyebrow">
+              {paymentStatus === 'success' ? 'Payment received' : paymentStatus === 'cancelled' ? 'Payment not completed' : 'Booking received'}
+            </span>
+            <h1>
+              {paymentStatus === 'success'
+                ? 'Your tyre booking is confirmed.'
+                : paymentStatus === 'cancelled'
+                  ? 'Your booking is waiting for payment.'
+                  : 'Your tyre booking has been received.'}
+            </h1>
+            <p>
+              {paymentStatus === 'success'
+                ? 'Your secure card payment has been completed. Keep your phone nearby while we review timing, access and any details that need attention.'
+                : paymentStatus === 'cancelled'
+                  ? 'The request was created, but Stripe Checkout was not completed. Please call or start a new booking if you still need the tyre visit.'
+                  : 'We have received your Edinburgh Tyre Fitting request. Keep your phone nearby while we review the details, confirm timing and check anything that needs attention.'}
+            </p>
+          </div>
+        </div>
+        <dl className="ref-box" aria-label="Booking summary">
+          <div className="ref-row ref-row-primary">
+            <dt>Booking reference</dt>
+            <dd>{ref}</dd>
           </div>
           {requestRef && (
-            <div>
-              <span>Request ref</span>
-              <strong>{requestRef}</strong>
+            <div className="ref-row">
+              <dt>Request reference</dt>
+              <dd>{requestRef}</dd>
             </div>
           )}
-          {total != null && Number.isFinite(total) && (
-            <div>
-              <span>Estimate</span>
-              <strong>
-                {new Intl.NumberFormat('en-GB', {
-                  style: 'currency',
-                  currency: 'GBP',
-                  maximumFractionDigits: 0,
-                }).format(total)}
-              </strong>
+          {formattedTotal && (
+            <div className="ref-row ref-row-total">
+              <dt>Estimate</dt>
+              <dd>{formattedTotal}</dd>
             </div>
           )}
-        </div>
+        </dl>
         <div className="final-meta-grid">
           <div>
             <Clock size={20} aria-hidden="true" />
@@ -105,8 +112,8 @@ export default async function FinalPage({
             <Phone size={18} aria-hidden="true" />
             Call now
           </a>
-          <a className="secondary-button" href={`https://wa.me/${siteConfig.whatsapp}`}>
-            <MessageCircle size={18} aria-hidden="true" />
+          <a className="secondary-button whatsapp-action" href={`https://wa.me/${siteConfig.whatsapp}`}>
+            <WhatsAppIcon className="whatsapp-icon" size={19} />
             WhatsApp
           </a>
           <Link className="secondary-button" href="/">

@@ -10,8 +10,8 @@ export const siteConfig = {
   integrationSource: 'edinburgh_tyre_fitting',
   serviceRadiusMiles: 50,
   center: {
-    lat: 55.9533,
-    lng: -3.1883,
+    lat: 55.873557,
+    lng: -3.16378,
   },
 } as const;
 

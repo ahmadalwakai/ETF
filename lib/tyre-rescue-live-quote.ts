@@ -1,4 +1,5 @@
 import type { BookingRequest } from './booking-schema';
+import { siteConfig } from './site';
 
 type BookingService = BookingRequest['service'];
 type BookingUrgency = BookingRequest['urgency'];
@@ -142,6 +143,22 @@ export function isTyreRescueApiError(error: unknown): error is TyreRescueApiErro
   return error instanceof TyreRescueApiError;
 }
 
+function projectIntegrationHeaders(): Record<string, string> {
+  const secret = process.env.EDINBURGH_TYRE_FITTING_INTEGRATION_SECRET?.trim();
+  if (!secret) {
+    throw new TyreRescueApiError(
+      'Edinburgh live pricing integration secret is not configured.',
+      500,
+      'INTEGRATION_SECRET_MISSING',
+    );
+  }
+
+  return {
+    'x-integration-key': secret,
+    'x-source-app': siteConfig.integrationSource,
+  };
+}
+
 export function buildScheduledAt(date?: string, time?: string): string | undefined {
   if (!date) return undefined;
 
@@ -237,8 +254,15 @@ async function fetchEligibility(input: LiveQuoteInput): Promise<EligibilityRespo
   try {
     return await readApiJson<EligibilityResponse>('/api/availability/eligibility', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ lat: input.lat, lng: input.lng }),
+      headers: {
+        'content-type': 'application/json',
+        ...projectIntegrationHeaders(),
+      },
+      body: JSON.stringify({
+        lat: input.lat,
+        lng: input.lng,
+        pricingOrigin: { sourceApp: siteConfig.integrationSource },
+      }),
     });
   } catch {
     return null;
@@ -324,12 +348,17 @@ export async function getTyreRescueLiveQuote(input: LiveQuoteInput): Promise<Liv
     quantity: tyreSelections.length === 0 ? quantity : undefined,
     fittingLocation: 'mobile' as const,
     scheduledAt: bookingType === 'scheduled' ? input.scheduledAt : undefined,
+    pricingOrigin: { sourceApp: siteConfig.integrationSource },
   };
 
   const [quote, eligibility] = await Promise.all([
     readApiJson<TyreRescueQuoteResponse>('/api/bookings/quote', {
       method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-visit-count': '1' },
+      headers: {
+        'content-type': 'application/json',
+        'x-visit-count': '1',
+        ...projectIntegrationHeaders(),
+      },
       body: JSON.stringify(quotePayload),
     }),
     fetchEligibility(input),

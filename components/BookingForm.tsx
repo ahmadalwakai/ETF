@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Check, ChevronLeft, LoaderCircle, MapPin } from 'lucide-react';
+import { ArrowRight, Check, ChevronLeft, LoaderCircle, LocateFixed, MapPin } from 'lucide-react';
 import { serviceOptions, getServiceOption, formatCurrency, serviceNeedsTyreSize } from '@/lib/pricing';
 import type { BookingRequest } from '@/lib/booking-schema';
 
@@ -149,6 +149,7 @@ export function BookingForm() {
   const [addressLoading, setAddressLoading] = useState(false);
   const [addressOpen, setAddressOpen] = useState(false);
   const [addressMessage, setAddressMessage] = useState('');
+  const [currentLocationLoading, setCurrentLocationLoading] = useState(false);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [liveQuote, setLiveQuote] = useState<LiveQuote | null>(null);
   const [locationPreview, setLocationPreview] = useState<LocationPreview | null>(null);
@@ -383,6 +384,89 @@ export function BookingForm() {
     setError('');
   }
 
+  function currentLocationErrorMessage(error: GeolocationPositionError): string {
+    if (error.code === error.PERMISSION_DENIED) {
+      return 'Location permission was blocked. Allow location access or type the postcode.';
+    }
+
+    if (error.code === error.TIMEOUT) {
+      return 'Current location took too long. Try again or type the postcode.';
+    }
+
+    return 'Current location could not be detected. Type the postcode instead.';
+  }
+
+  async function useCurrentLocation() {
+    if (!('geolocation' in navigator)) {
+      setAddressMessage('Current location is not available in this browser.');
+      return;
+    }
+
+    setCurrentLocationLoading(true);
+    setAddressLoading(false);
+    setAddressOpen(false);
+    setAddressSuggestions([]);
+    setAddressMessage('Finding your current location...');
+    setQuoteMessage('');
+    setError('');
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const response = await fetch('/api/places/current', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              lat: position.coords.latitude,
+              lng: position.coords.longitude,
+              accuracy: position.coords.accuracy,
+            }),
+          });
+          const payload = (await response.json().catch(() => null)) as
+            | (LocationPreview & { error?: string; accuracyMeters?: number | null })
+            | null;
+
+          if (!response.ok || !payload?.label || !payload.coordinates) {
+            throw new Error(payload?.error || 'Current location could not be checked.');
+          }
+
+          update('location', payload.label);
+          setSelectedAddressId('current-location');
+          setAddressOpen(false);
+          setAddressSuggestions([]);
+          setLocationPreview(payload);
+          setLiveQuote(null);
+          setQuoteMessage('');
+
+          if (!payload.inServiceArea) {
+            setError(`Your current location is ${Math.round(payload.distanceMiles)} miles from Edinburgh. The booking area is ${payload.serviceRadiusMiles} miles.`);
+            setAddressMessage('Current location is outside the booking area.');
+            return;
+          }
+
+          setAddressMessage(`${payload.distanceMiles} miles from Edinburgh centre.`);
+        } catch (locationError) {
+          setAddressMessage(
+            locationError instanceof Error
+              ? locationError.message
+              : 'Current location could not be checked. Type the postcode instead.',
+          );
+        } finally {
+          setCurrentLocationLoading(false);
+        }
+      },
+      (locationError) => {
+        setAddressMessage(currentLocationErrorMessage(locationError));
+        setCurrentLocationLoading(false);
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 60000,
+        timeout: 12000,
+      },
+    );
+  }
+
   function chooseTyreSize(suggestion: TyreSizeSuggestion) {
     update('tyreSize', suggestion.size);
     setSelectedTyreSize(suggestion.size);
@@ -587,6 +671,19 @@ export function BookingForm() {
                   </div>
                 )}
               </div>
+              <button
+                type="button"
+                className="current-location-button"
+                onClick={useCurrentLocation}
+                disabled={currentLocationLoading}
+              >
+                {currentLocationLoading ? (
+                  <LoaderCircle size={18} aria-hidden="true" className="spin" />
+                ) : (
+                  <LocateFixed size={18} aria-hidden="true" />
+                )}
+                {currentLocationLoading ? 'Finding location...' : 'Use my current location'}
+              </button>
               {addressMessage && !addressOpen && <span className="location-status">{addressMessage}</span>}
             </div>
 
